@@ -1,44 +1,35 @@
 # 🏀 Basketball Player Detection
 
-A computer vision project for detecting basketball players in images and videos using **YOLO11m**.
+An end-to-end **Computer Vision object detection project** built with **YOLO11m** for detecting and analyzing basketball-related objects and actions in images and videos.
 
-The project includes a trained YOLO11m object detection model and an interactive **Streamlit web application** that supports both image and video detection.
-
----
-
-## 🚀 Project Overview
-
-Basketball Player Detection is designed to automatically detect basketball players in basketball scenes using deep learning and computer vision.
-
-The system can process:
-
-* 🖼️ Single or multiple images
-* 🎥 Single or multiple videos
-* 🔍 Real-time-style frame-by-frame video detection
-* 📊 Configurable confidence and IoU thresholds
-* ⚡ Configurable video frame processing
-* 🖥️ Interactive Streamlit demo
+The project includes a trained YOLO11m model and an interactive **Streamlit web application** supporting image and video inference.
 
 ---
 
-## 🎯 Objective
+## 🎯 Project Overview
 
-The main objective of this project is to build an end-to-end object detection system capable of identifying basketball players in different basketball scenes.
+The system detects multiple basketball-related classes from images and videos.
 
-The complete workflow includes:
+The final model was evaluated on a dedicated test set containing:
+
+* **94 images**
+* **1,980 annotated instances**
+* **9 object classes**
+
+The project covers the complete computer vision workflow:
 
 ```text
 Dataset
    ↓
 Data Preparation
    ↓
-YOLO Training
+YOLO11m Training
    ↓
 Model Evaluation
    ↓
 Best Model Selection
    ↓
-Streamlit Deployment
+Streamlit Application
    ↓
 Image & Video Detection
 ```
@@ -47,11 +38,22 @@ Image & Video Detection
 
 ## 🤖 Model
 
-The project uses:
+### YOLO11m
 
-**YOLO11m**
+The project uses **YOLO11m** from Ultralytics.
 
-The final trained model is stored as:
+Model information:
+
+| Property                |           Value |
+| ----------------------- | --------------: |
+| Model                   |         YOLO11m |
+| Parameters              |      20,037,742 |
+| GFLOPs                  |            67.8 |
+| Layers                  |             126 |
+| Framework               |     Ultralytics |
+| GPU used for evaluation | NVIDIA Tesla T4 |
+
+The trained model is provided as:
 
 ```text
 best.pt
@@ -63,34 +65,96 @@ Model size:
 ~40.5 MB
 ```
 
-The model is loaded directly by the Streamlit application and used for inference on uploaded images and videos.
+---
+
+## 🎯 Detection Classes
+
+The final model detects **9 classes**:
+
+| Class                   |
+| ----------------------- |
+| 🏀 ball                 |
+| 🏀 ball-in-basket       |
+| 🔢 number               |
+| 🧍 player               |
+| 🏀 player-in-possession |
+| 🏀 player-jump-shot     |
+| 🛡️ player-shot-block   |
+| 👨‍⚖️ referee           |
+| 🏀 rim                  |
 
 ---
 
-## 🖼️ Image Detection
+# 📊 Model Performance
 
-The Streamlit application supports uploading:
+The final model was evaluated on the test set.
+
+### Overall Results
+
+| Metric        |      Score |
+| ------------- | ---------: |
+| **Precision** | **76.50%** |
+| **Recall**    | **69.15%** |
+| **mAP@50**    | **75.32%** |
+| **mAP@50:95** | **53.15%** |
+
+### Per-Class Results
+
+| Class                | Precision |     Recall |    mAP@50 | mAP@50:95 |
+| -------------------- | --------: | ---------: | --------: | --------: |
+| ball                 |     83.7% |      58.5% |     68.4% |     38.6% |
+| ball-in-basket       |     51.7% |      50.0% |     56.0% |     42.6% |
+| number               |     79.6% |      89.4% |     90.2% |     48.4% |
+| **player**           | **91.5%** |  **97.0%** | **96.6%** | **76.1%** |
+| player-in-possession |     52.2% |      42.5% |     44.9% |     36.3% |
+| player-jump-shot     |     73.2% |      50.0% |     69.9% |     50.0% |
+| player-shot-block    |     63.3% |      37.1% |     53.3% |     37.9% |
+| **referee**          | **96.1%** |  **97.9%** | **99.1%** | **80.6%** |
+| **rim**              | **97.2%** | **100.0%** | **99.5%** | **67.9%** |
+
+### ⭐ Key Result
+
+The main `player` class achieved:
+
+* **91.5% Precision**
+* **97.0% Recall**
+* **96.6% mAP@50**
+* **76.1% mAP@50:95**
+
+This demonstrates strong performance for the primary basketball-player detection task.
+
+---
+
+# 🖥️ Streamlit Application
+
+The project includes an interactive Streamlit application for running the trained model without writing inference code.
+
+The application provides two main modes:
+
+### 🖼️ Image Detection
+
+Users can upload:
 
 * JPG
 * JPEG
 * PNG
 * WEBP
 
-Multiple images can be uploaded at the same time.
+Multiple images can be uploaded and processed.
 
-For each image, the application:
+For every image, the application:
 
 1. Loads the image.
-2. Runs YOLO inference.
-3. Draws bounding boxes.
+2. Runs YOLO11m inference.
+3. Draws bounding boxes and class labels.
 4. Displays the detection result.
 5. Reports the number of detected objects.
 6. Measures inference time.
-7. Provides an option to download the result.
+7. Allows downloading the result.
 
 ---
 
-## 🎥 Video Detection
+### 🎥 Video Detection
 
 The application supports:
 
@@ -100,7 +164,7 @@ The application supports:
 * MKV
 * WEBM
 
-Multiple videos can also be processed.
+Multiple videos can be uploaded.
 
 The video pipeline performs:
 
@@ -109,38 +173,38 @@ Input Video
      ↓
 Frame Extraction
      ↓
-YOLO11m Detection
+YOLO11m Inference
      ↓
 Bounding Box Rendering
      ↓
 Video Reconstruction
-     ↓
-H.264 Conversion
      ↓
 Browser-Compatible MP4
      ↓
 ▶️ Streamlit Video Player
 ```
 
-The processed video can be played directly inside the Streamlit application without requiring the user to download it first.
+After processing, the detected video can be **played directly inside Streamlit**.
+
+The user does not need to download the processed video before viewing it.
 
 ---
 
-## ⚙️ Detection Settings
+# ⚙️ Detection Settings
 
-The application provides configurable detection parameters.
+The Streamlit application provides adjustable inference settings.
 
 ### Confidence Threshold
 
-Controls the minimum confidence required for a detection to be displayed.
+Controls the minimum confidence required for a detection.
 
 ### IoU Threshold
 
-Controls the Intersection over Union threshold used during Non-Maximum Suppression.
+Controls the IoU threshold used during Non-Maximum Suppression.
 
 ### Frame Skip
 
-For videos, users can select:
+For video processing:
 
 ```text
 1 → Process every frame
@@ -148,93 +212,77 @@ For videos, users can select:
 3 → Process every third frame
 ```
 
-This provides a trade-off between processing speed and temporal detection detail.
+This allows the user to trade detection detail for processing speed.
 
 ---
 
-## 🖥️ Streamlit Demo
+# 📸 Demo
 
-The project includes an interactive Streamlit interface with two main sections:
+## Streamlit Interface
 
-### Image Detection
+![Streamlit Interface](screenshots/Interface.PNG)
 
-Upload one or multiple basketball images and run detection directly from the browser.
+## Image Detection
 
-### Video Detection
+![Basketball Detection](screenshots/Detected_Image.jpg)
 
-Upload one or multiple basketball videos, process them with YOLO11m, and preview the detected video directly inside Streamlit.
+## 🎥 Video Demo
 
----
+A demonstration video showing the basketball detection system running through the Streamlit application is available here:
 
-## 📸 Demo
-
-### Image Detection
-
-Add screenshots of the application here:
-
-```text
-screenshots/
-```
-
-Example:
-
-```markdown
-![Image Detection](screenshots/image_detection.png)
-```
-
-### Video Detection
-
-A screen recording of the Streamlit demo can also be added to demonstrate the complete detection workflow.
+[▶️ Watch the Video Demo](demo/Detected_Video.mp4)
 
 ---
 
-## 📁 Project Structure
+# 📁 Project Structure
 
 ```text
 Basketball-Player-Detection/
 │
 ├── app.py
 ├── best.pt
+├── README.md
 ├── requirements.txt
 ├── .gitignore
 │
 ├── screenshots/
+│   ├── Interface.PNG
+│   └── Detected_Image.jpg
 │
-└── outputs/
-    ├── images/
-    └── videos/
+└── demo/
+    └── Detected_Video.mp4
 ```
 
 ### Main Files
 
-| File               | Description                 |
-| ------------------ | --------------------------- |
-| `app.py`           | Streamlit application       |
-| `best.pt`          | Trained YOLO11m model       |
-| `requirements.txt` | Python dependencies         |
-| `.gitignore`       | Git ignored files           |
-| `screenshots/`     | Project screenshots         |
-| `outputs/`         | Generated detection results |
+| File / Folder      | Description             |
+| ------------------ | ----------------------- |
+| `app.py`           | Streamlit application   |
+| `best.pt`          | Trained YOLO11m model   |
+| `requirements.txt` | Python dependencies     |
+| `.gitignore`       | Ignored local files     |
+| `screenshots/`     | Application screenshots |
+| `demo/`            | Video demonstration     |
 
 ---
 
-## 🛠️ Technologies
+# 🛠️ Technologies
 
 The project was developed using:
 
-* Python
-* PyTorch
-* Ultralytics YOLO
-* YOLO11m
-* OpenCV
-* Streamlit
-* Pillow
-* NumPy
-* FFmpeg
+* **Python**
+* **PyTorch**
+* **Ultralytics YOLO**
+* **YOLO11m**
+* **OpenCV**
+* **Streamlit**
+* **Pillow**
+* **NumPy**
+* **FFmpeg**
 
 ---
 
-## 💻 Installation
+# 💻 Installation
 
 Clone the repository:
 
@@ -242,7 +290,7 @@ Clone the repository:
 git clone https://github.com/AhmedSamy-Mohamed/Basketball-Player-Detection.git
 ```
 
-Move into the project directory:
+Navigate to the project:
 
 ```bash
 cd Basketball-Player-Detection
@@ -260,7 +308,7 @@ Activate the environment on Windows:
 .\venv\Scripts\Activate.ps1
 ```
 
-Install the required dependencies:
+Install dependencies:
 
 ```bash
 pip install -r requirements.txt
@@ -268,97 +316,95 @@ pip install -r requirements.txt
 
 ---
 
-## ▶️ Run the Application
+# ▶️ Run the Application
 
-Start the Streamlit application:
+Start Streamlit:
 
 ```bash
 python -m streamlit run app.py
 ```
 
-The application will open in your browser.
+The application will open in your default browser.
 
 ---
 
-## 🔍 Using the Demo
+# 🔍 How to Use
 
-### Image Detection
+## Image Detection
 
 1. Open the **Image Detection** tab.
 2. Upload one or more basketball images.
-3. Adjust the confidence threshold if needed.
+3. Adjust the confidence threshold.
 4. Click **Run Image Detection**.
-5. View the detected players.
-6. Download the results if required.
+5. View the detection results.
+6. Download the processed images if required.
 
-### Video Detection
+## Video Detection
 
 1. Open the **Video Detection** tab.
 2. Upload one or more basketball videos.
-3. Select the desired frame processing mode.
+3. Select the desired frame-processing mode.
 4. Click **Run Video Detection**.
-5. Wait for YOLO processing to finish.
-6. The processed video appears directly inside Streamlit.
-7. Press ▶️ to play the detection result.
-8. Download the processed video if required.
+5. Wait for processing to complete.
+6. Play the processed video directly inside Streamlit.
+7. Download the result if required.
 
 ---
 
-## 📊 Model Evaluation
+# ⚡ Inference Performance
 
-The final model was trained and evaluated as part of the project development pipeline.
+During model evaluation, the reported average processing times were:
 
-Detailed evaluation metrics, including:
+| Stage          |          Time |
+| -------------- | ------------: |
+| Preprocessing  |  3.1 ms/image |
+| Inference      | 14.7 ms/image |
+| Loss           |  0.3 ms/image |
+| Postprocessing |  9.6 ms/image |
 
-* Precision
-* Recall
-* mAP@50
-* mAP@50:95
-* Validation results
-
-can be added here based on the final evaluation results.
-
----
-
-## 🔮 Future Improvements
-
-Potential future improvements include:
-
-* Tracking individual players across frames
-* Real-time webcam detection
-* Basketball detection
-* Team classification
-* Player counting
-* Jersey number recognition
-* Court detection
-* Player trajectory analysis
-* GPU-accelerated inference
-* Cloud deployment
-* Real-time analytics dashboard
+The model was evaluated using an NVIDIA Tesla T4 GPU.
 
 ---
 
-## 👨‍💻 Author
+# 🔮 Future Improvements
 
-**Ahmed Samy Mohamed**
+Possible future improvements include:
 
-Mechatronics Engineering Student
-Faculty of Engineering — Tanta University
+* 🎯 Multi-object tracking
+* 🏀 Basketball tracking
+* 👕 Team classification
+* 🔢 Automatic jersey-number recognition
+* 📊 Player statistics
+* 🏃 Player trajectory analysis
+* 🏀 Court detection
+* 🎥 Real-time webcam detection
+* ⚡ GPU-accelerated deployment
+* ☁️ Cloud deployment
+* 📈 Real-time analytics dashboard
 
-Interested in:
+---
+
+# 👨‍💻 Author
+
+## Ahmed Samy Mohamed
+
+**Mechatronics Engineering Student**
+**Faculty of Engineering — Tanta University**
+
+### Areas of Interest
 
 * Computer Vision
 * Machine Learning
+* Artificial Intelligence
 * Robotics
-* AI
 * Mechatronics
 
 ---
 
-## ⭐ Project
+# ⭐ Project
 
-If you find this project useful, feel free to ⭐ the repository.
+If you find this project useful, consider giving it a ⭐ on GitHub.
 
-**GitHub Repository:**
+**Repository:**
 
 https://github.com/AhmedSamy-Mohamed/Basketball-Player-Detection
