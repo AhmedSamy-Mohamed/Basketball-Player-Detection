@@ -8,6 +8,7 @@ import os
 import cv2
 import time
 import io
+import shutil
 
 
 # ============================================================
@@ -29,7 +30,6 @@ st.set_page_config(
 st.markdown(
     """
     <style>
-
     .main-title {
         font-size: 42px;
         font-weight: 800;
@@ -56,7 +56,6 @@ st.markdown(
         border-radius: 10px;
         font-weight: 700;
     }
-
     </style>
     """,
     unsafe_allow_html=True
@@ -72,7 +71,6 @@ BASE_DIR = Path(__file__).resolve().parent
 MODEL_PATH = BASE_DIR / "best.pt"
 
 OUTPUT_DIR = BASE_DIR / "outputs"
-
 IMAGE_OUTPUT_DIR = OUTPUT_DIR / "images"
 VIDEO_OUTPUT_DIR = OUTPUT_DIR / "videos"
 
@@ -81,13 +79,19 @@ VIDEO_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
 
 # ============================================================
-# FFMPEG
+# FFMPEG DETECTION
 # ============================================================
 
-FFMPEG_PATH = Path(
-    r"C:\Users\me\OneDrive - Faculty Of Engineering (Tanta University)"
-    r"\Desktop\ffmpeg-9.0.1-essentials_build\bin\ffmpeg.exe"
-)
+FFMPEG_PATH = shutil.which("ffmpeg")
+
+if FFMPEG_PATH is None:
+    local_ffmpeg = Path(
+        r"C:\Users\me\OneDrive - Faculty Of Engineering (Tanta University)"
+        r"\Desktop\ffmpeg-9.0.1-essentials_build\bin\ffmpeg.exe"
+    )
+
+    if local_ffmpeg.exists():
+        FFMPEG_PATH = str(local_ffmpeg)
 
 
 # ============================================================
@@ -96,7 +100,6 @@ FFMPEG_PATH = Path(
 
 @st.cache_resource
 def load_model():
-
     if not MODEL_PATH.exists():
         return None
 
@@ -126,12 +129,10 @@ st.markdown(
 # ============================================================
 
 if model is None:
-
     st.error(
         f"❌ Model not found.\n\n"
         f"Expected:\n`{MODEL_PATH}`"
     )
-
     st.stop()
 
 
@@ -139,12 +140,13 @@ if model is None:
 # FFMPEG CHECK
 # ============================================================
 
-if not FFMPEG_PATH.exists():
-
+if FFMPEG_PATH is None:
     st.warning(
-        "⚠️ FFmpeg was not found at the configured path.\n\n"
-        f"`{FFMPEG_PATH}`"
+        "⚠️ FFmpeg was not found. "
+        "Video conversion may not be available."
     )
+else:
+    st.success("✅ FFmpeg detected")
 
 
 # ============================================================
@@ -202,7 +204,6 @@ with st.sidebar:
     st.write(f"**File:** `{MODEL_PATH.name}`")
 
     if MODEL_PATH.exists():
-
         size_mb = (
             MODEL_PATH.stat().st_size
             / (1024 * 1024)
@@ -217,7 +218,6 @@ with st.sidebar:
     st.subheader("🎯 Classes")
 
     for class_id, class_name in model.names.items():
-
         st.write(
             f"`{class_id}` — {class_name}"
         )
@@ -276,9 +276,7 @@ with image_tab:
             uploaded_images
         ):
 
-            image = Image.open(
-                uploaded_file
-            )
+            image = Image.open(uploaded_file)
 
             with preview_columns[
                 i % len(preview_columns)
@@ -355,7 +353,6 @@ with image_tab:
                 detection_count = 0
 
                 if result.boxes is not None:
-
                     detection_count = len(
                         result.boxes
                     )
@@ -444,26 +441,28 @@ def convert_to_browser_mp4(
     output_path
 ):
 
-    if not FFMPEG_PATH.exists():
-
+    if FFMPEG_PATH is None:
         return False, (
             "FFmpeg executable was not found."
         )
 
     command = [
-        str(FFMPEG_PATH),
+        FFMPEG_PATH,
         "-y",
         "-i",
         str(input_path),
 
         "-c:v",
-        "h264_qsv",
+        "libx264",
 
         "-preset",
-        "medium",
+        "fast",
+
+        "-crf",
+        "23",
 
         "-pix_fmt",
-        "nv12",
+        "yuv420p",
 
         "-c:a",
         "aac",
@@ -487,13 +486,11 @@ def convert_to_browser_mp4(
         )
 
         if process.returncode == 0:
-
             return True, ""
 
         return False, process.stderr
 
     except Exception as e:
-
         return False, str(e)
 
 
@@ -561,13 +558,9 @@ with video_tab:
                     f"## 🎥 {uploaded_file.name}"
                 )
 
-                # ------------------------------------------------
-                # SAVE INPUT VIDEO
-                # ------------------------------------------------
-
-                input_suffix = (
-                    Path(uploaded_file.name).suffix
-                )
+                input_suffix = Path(
+                    uploaded_file.name
+                ).suffix
 
                 with tempfile.NamedTemporaryFile(
                     delete=False,
@@ -579,10 +572,6 @@ with video_tab:
                     )
 
                     input_path = temp_input.name
-
-                # ------------------------------------------------
-                # OPEN VIDEO
-                # ------------------------------------------------
 
                 cap = cv2.VideoCapture(
                     input_path
@@ -596,7 +585,7 @@ with video_tab:
 
                     try:
                         os.unlink(input_path)
-                    except:
+                    except OSError:
                         pass
 
                     continue
@@ -604,6 +593,9 @@ with video_tab:
                 fps = cap.get(
                     cv2.CAP_PROP_FPS
                 )
+
+                if fps <= 0:
+                    fps = 30.0
 
                 total_frames = int(
                     cap.get(
@@ -643,10 +635,6 @@ with video_tab:
                     f"Duration: **{duration:.2f}s**"
                 )
 
-                # ------------------------------------------------
-                # OUTPUT RESOLUTION
-                # ------------------------------------------------
-
                 output_width = (
                     video_width
                     if video_width is not None
@@ -669,10 +657,6 @@ with video_tab:
                     output_height % 2
                 )
 
-                # ------------------------------------------------
-                # TEMP YOLO VIDEO
-                # ------------------------------------------------
-
                 temp_yolo_output = (
                     VIDEO_OUTPUT_DIR
                     / (
@@ -681,10 +665,6 @@ with video_tab:
                     )
                 )
 
-                # ------------------------------------------------
-                # FINAL BROWSER VIDEO
-                # ------------------------------------------------
-
                 final_output = (
                     VIDEO_OUTPUT_DIR
                     / (
@@ -692,10 +672,6 @@ with video_tab:
                         + "_detected.mp4"
                     )
                 )
-
-                # ------------------------------------------------
-                # OPEN VIDEO WRITER
-                # ------------------------------------------------
 
                 fourcc = cv2.VideoWriter_fourcc(
                     *"mp4v"
@@ -722,14 +698,10 @@ with video_tab:
 
                     try:
                         os.unlink(input_path)
-                    except:
+                    except OSError:
                         pass
 
                     continue
-
-                # ------------------------------------------------
-                # PROCESSING
-                # ------------------------------------------------
 
                 progress = st.progress(0)
                 status = st.empty()
@@ -748,11 +720,7 @@ with video_tab:
                     if not success:
                         break
 
-                    if (
-                        frame_number
-                        % frame_skip
-                        == 0
-                    ):
+                    if frame_number % frame_skip == 0:
 
                         results = model.predict(
                             source=frame,
@@ -841,10 +809,6 @@ with video_tab:
                         f"{processing_fps:.1f} FPS"
                     )
 
-                # ------------------------------------------------
-                # RELEASE
-                # ------------------------------------------------
-
                 cap.release()
                 writer.release()
 
@@ -866,42 +830,12 @@ with video_tab:
                     f"{elapsed_total:.2f} seconds."
                 )
 
-                # ------------------------------------------------
-                # CONVERT TO H.264
-                # ------------------------------------------------
-
-                st.info(
-                    "🎞️ Converting video to "
-                    "browser-compatible H.264..."
-                )
-
-                conversion_start = time.time()
-
-                success, error_message = (
-                    convert_to_browser_mp4(
-                        temp_yolo_output,
-                        final_output
-                    )
-                )
-
-                conversion_time = (
-                    time.time()
-                    - conversion_start
-                )
-
-                if not success:
+                if FFMPEG_PATH is None:
 
                     st.error(
-                        "❌ H.264 conversion failed."
-                    )
-
-                    st.code(
-                        error_message,
-                        language="text"
-                    )
-
-                    st.warning(
-                        "The YOLO video was still created."
+                        "❌ FFmpeg is not available. "
+                        "The video cannot be converted "
+                        "to browser-compatible H.264."
                     )
 
                     if temp_yolo_output.exists():
@@ -911,9 +845,7 @@ with video_tab:
                             "rb"
                         ) as f:
 
-                            fallback_bytes = (
-                                f.read()
-                            )
+                            fallback_bytes = f.read()
 
                         st.download_button(
                             "⬇️ Download YOLO Video",
@@ -930,71 +862,91 @@ with video_tab:
 
                 else:
 
-                    st.success(
-                        "✅ Video converted successfully "
-                        f"in {conversion_time:.2f}s"
+                    st.info(
+                        "🎞️ Converting video to "
+                        "browser-compatible H.264..."
                     )
 
-                    # ------------------------------------------------
-                    # DISPLAY VIDEO DIRECTLY
-                    # ------------------------------------------------
+                    conversion_start = time.time()
 
-                    st.subheader(
-                        "🎯 Detection Result"
-                    )
-
-                    with open(
-                        final_output,
-                        "rb"
-                    ) as video_file:
-
-                        video_bytes = (
-                            video_file.read()
-                        )
-
-                    st.video(
-                        video_bytes,
-                        format="video/mp4",
-                        autoplay=False,
-                        muted=False
-                    )
-
-                    st.success(
-                        "🎬 Detection result is ready — "
-                        "press ▶️ to play it directly "
-                        "inside Streamlit."
-                    )
-
-                    # ------------------------------------------------
-                    # DOWNLOAD OPTIONAL
-                    # ------------------------------------------------
-
-                    st.download_button(
-                        label="⬇️ Download Detected Video",
-                        data=video_bytes,
-                        file_name=(
-                            final_output.name
-                        ),
-                        mime="video/mp4",
-                        key=(
-                            f"video_download_"
-                            f"{video_index}"
+                    success, error_message = (
+                        convert_to_browser_mp4(
+                            temp_yolo_output,
+                            final_output
                         )
                     )
 
-                # ------------------------------------------------
-                # CLEAN TEMP FILES
-                # ------------------------------------------------
+                    conversion_time = (
+                        time.time()
+                        - conversion_start
+                    )
+
+                    if not success:
+
+                        st.error(
+                            "❌ H.264 conversion failed."
+                        )
+
+                        st.code(
+                            error_message,
+                            language="text"
+                        )
+
+                    else:
+
+                        st.success(
+                            "✅ Video converted successfully "
+                            f"in {conversion_time:.2f}s"
+                        )
+
+                        st.subheader(
+                            "🎯 Detection Result"
+                        )
+
+                        with open(
+                            final_output,
+                            "rb"
+                        ) as video_file:
+
+                            video_bytes = (
+                                video_file.read()
+                            )
+
+                        st.video(
+                            video_bytes,
+                            format="video/mp4",
+                            autoplay=False,
+                            muted=False
+                        )
+
+                        st.success(
+                            "🎬 Detection result is ready — "
+                            "press ▶️ to play it directly "
+                            "inside Streamlit."
+                        )
+
+                        st.download_button(
+                            label="⬇️ Download Detected Video",
+                            data=video_bytes,
+                            file_name=(
+                                final_output.name
+                            ),
+                            mime="video/mp4",
+                            key=(
+                                f"video_download_"
+                                f"{video_index}"
+                            )
+                        )
 
                 try:
                     os.unlink(input_path)
-                except:
+                except OSError:
                     pass
 
                 try:
                     if temp_yolo_output.exists():
                         temp_yolo_output.unlink()
-                except:
+                except OSError:
                     pass
 
                 st.divider()
@@ -1015,4 +967,3 @@ st.markdown(
     """,
     unsafe_allow_html=True
 )
-
